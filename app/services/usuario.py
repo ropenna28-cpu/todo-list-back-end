@@ -1,9 +1,14 @@
+"""Operações de cadastro, login e identificação de usuários."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-from app.core.exceptions import EmailJaCadastrado, CredenciaisInvalidas
+from app.core.exceptions import (
+    CredenciaisInvalidas,
+    EmailJaCadastrado,
+    TokenInvalido,
+)
 from app.core.security import HashDeSenha, TokenEmitido, TokenJWT
 from app.models import Usuario
 from app.repositories import UsuarioRepositorio
@@ -58,6 +63,27 @@ class UsuarioServico:
             usuario=usuario,
             token=self._exigir_tokens().emitir(usuario.id),
         )
+
+    def usuario_do_token(self, token: str) -> Usuario:
+        """Devolve o dono de um token válido.
+
+        Raises:
+            TokenInvalido: se o token for inválido ou estiver vencido, ou se
+                pertencer a um usuário que não existe mais.
+        """
+        payload = self._exigir_tokens().ler(token)
+
+        try:
+            usuario_id = int(payload["sub"])
+        except (KeyError, ValueError):
+            raise TokenInvalido() from None
+
+        usuario = self._repositorio.buscar_por_id(usuario_id)
+
+        if usuario is None:
+            raise TokenInvalido()
+
+        return usuario
 
     def _exigir_tokens(self) -> TokenJWT:
         """Exige um emissor de tokens configurado."""
