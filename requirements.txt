@@ -1,0 +1,23 @@
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+sqlalchemy==2.0.52
+psycopg[binary]==3.3.6
+pydantic[email]==2.13.5
+python-dotenv==1.2.3
+bcrypt==5.0.0
+
+# Somente para desenvolvimento e testes
+pytest==9.1.1
+httpx==0.28.1
+
+
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+sqlalchemy==2.0.52
+psycopg[binary]==3.3.6
+pydantic[email]==2.13.5
+python-dotenv==1.2.3
+bcrypt==5.0.0
+PyJWT==2.15.1
+pytest==9.1.1
+httpx==0.28.1
