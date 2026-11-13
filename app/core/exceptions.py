@@ -22,6 +22,10 @@ class UsuarioNaoEncontrado(RecursoNaoEncontrado):
     mensagem = "Usuário não encontrado."
 
 
+class TarefaNaoEncontrada(RecursoNaoEncontrado):
+    mensagem = "Tarefa não encontrada."
+
+
 # Regra de negócio violada: a camada HTTP traduz esta família em 422.
 class RegraDeNegocioViolada(ErroDeDominio):
     """A operação é compreensível, mas contraria uma regra do negócio."""
@@ -41,6 +45,12 @@ class ValorInvalido(RegraDeNegocioViolada):
 class EmailJaCadastrado(ErroDeDominio):
     """RN-01: um e-mail não pode ser usado por dois usuários."""
     mensagem = "Já existe uma conta com este e-mail."
+
+
+# Autorização: a camada HTTP traduz em 403.
+class AcessoNaoAutorizado(ErroDeDominio):
+    """Tentativa de mexer em uma tarefa que pertence a outro usuário."""
+    mensagem = "Esta tarefa pertence a outro usuário."
 
 
 # Autenticação: a camada HTTP traduz esta família em 401.
