@@ -27,7 +27,12 @@ class TarefaServico:
         prioridade: PrioridadeTarefa,
         prazo: date | None,
     ) -> Tarefa:
-        """Cria uma tarefa para o usuário autenticado."""
+        """Cria uma tarefa para o usuário autenticado.
+
+        A RN-02 (toda tarefa nasce pendente) é garantida pelo construtor da
+        `Tarefa`. A RN-04 (o dono existe) é garantida pela autenticação: o id
+        vem de um token conferido, não do corpo da requisição.
+        """
         tarefa = Tarefa(
             usuario_id=usuario_id,
             titulo=titulo,
@@ -35,3 +40,7 @@ class TarefaServico:
             prazo=prazo,
         )
         return self._tarefas.salvar(tarefa)
+
+    def listar(self, usuario_id: int) -> list[Tarefa]:
+        """Lista as tarefas do usuário autenticado."""
+        return self._tarefas.listar(usuario_id)
