@@ -3,13 +3,19 @@
 O dono das tarefas é SEMPRE quem está autenticado (vem do token). Não existe
 mais `usuarioId` na URL nem no corpo: antes, bastava trocar esse número para
 ler, alterar ou apagar a tarefa de outra pessoa.
+
+Os nomes públicos dos parâmetros ficam em camelCase (`prazoAte`) e, no Python,
+em snake_case (`prazo_ate`) — o `alias` faz a ponte.
 """
 
+from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status
 
 from app.api.dependencies import UsuarioAtual, obter_tarefa_servico
+from app.models.enums import PrioridadeTarefa, StatusTarefa
+from app.repositories import FiltroDeTarefas
 from app.schemas import TarefaCreate, TarefaOut, TarefaUpdate
 from app.services import AlteracoesDaTarefa, TarefaServico
 
@@ -58,15 +64,40 @@ def criar_task(dados: TarefaCreate, usuario: UsuarioAtual, servico: Servico) -> 
     response_model=list[TarefaOut],
     summary="Listar as tarefas do usuário logado",
 )
-def listar_tasks(usuario: UsuarioAtual, servico: Servico, response: Response) -> list[TarefaOut]:
-    """Lista as tarefas do usuário logado, das mais recentes para as mais antigas.
+def listar_tasks(
+    usuario: UsuarioAtual,
+    servico: Servico,
+    response: Response,
+    # `status_tarefa` (e não `status`): o arquivo já importa `status` do FastAPI.
+    # O alias="status" mantém o nome público na URL.
+    status_tarefa: Annotated[StatusTarefa | None, Query(alias="status")] = None,
+    prioridade: Annotated[PrioridadeTarefa | None, Query()] = None,
+    prazo_ate: Annotated[
+        date | None,
+        Query(alias="prazoAte", description="Somente tarefas com prazo até esta data"),
+    ] = None,
+    busca: Annotated[
+        str | None,
+        Query(max_length=200, description="Texto contido no título (sem diferenciar maiúsculas)"),
+    ] = None,
+) -> list[TarefaOut]:
+    """Lista as tarefas do usuário logado, com filtros opcionais.
 
-    O cabeçalho `X-Total-Count` traz a quantidade de tarefas.
+    Os filtros se combinam (todos precisam valer ao mesmo tempo). As tarefas
+    saem das mais recentes para as mais antigas, e o cabeçalho `X-Total-Count`
+    traz a quantidade encontrada.
 
-    Devolve uma lista vazia — e não 404 — quando o usuário não tem tarefas:
-    a coleção existe, apenas está vazia.
+    Se nenhuma tarefa atender aos critérios, a resposta é uma lista vazia — e
+    não 404: a coleção existe, apenas está vazia.
     """
-    tarefas = servico.listar(usuario.id)
+    filtro = FiltroDeTarefas(
+        usuario_id=usuario.id,
+        status=status_tarefa,
+        prioridade=prioridade,
+        prazo_ate=prazo_ate,
+        busca=(busca or "").strip() or None,
+    )
+    tarefas = servico.listar(filtro)
     response.headers["X-Total-Count"] = str(len(tarefas))
     return tarefas
 
