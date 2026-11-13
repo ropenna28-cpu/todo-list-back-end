@@ -1,5 +1,6 @@
 
 from app.schemas.base import DataHoraUTC, EsquemaDeEntrada, EsquemaDeSaida
+from app.schemas.tarefa import TarefaCreate, TarefaOut
 from app.schemas.usuario import SessaoOut, UsuarioCreate, UsuarioLogin, UsuarioOut
 
 __all__ = [
@@ -7,6 +8,8 @@ __all__ = [
     "EsquemaDeEntrada",
     "EsquemaDeSaida",
     "SessaoOut",
+    "TarefaCreate",
+    "TarefaOut",
     "UsuarioCreate",
     "UsuarioLogin",
     "UsuarioOut",

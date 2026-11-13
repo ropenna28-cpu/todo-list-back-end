@@ -8,7 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.api.routers import usuarios
+from app.api.routers import tasks, usuarios
 from app.core.config import obter_configuracao
 from app.core.exceptions import (
     EmailJaCadastrado,
@@ -40,7 +40,7 @@ async def ciclo_de_vida(app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(
     title="Todo List API",
     description="Backend do ToDo List curso Desenvolvedor Full Stack (SENAC).",
-    version="0.5.0",
+    version="0.6.0",
     lifespan=ciclo_de_vida,
 )
 
@@ -72,8 +72,10 @@ def _mensagem_de_validacao(erro: dict[str, Any]) -> tuple[str, str]:
         "missing": f"O campo '{campo}' é obrigatório.",
         "string_too_short": f"O campo '{campo}' precisa ter pelo menos {ctx.get('min_length')} caractere(s).",
         "string_too_long": f"O campo '{campo}' pode ter no máximo {ctx.get('max_length')} caracteres.",
-        "enum": f"Valor inválido para '{campo}'.",
+        "enum": f"Valor inválido para '{campo}'. Valores aceitos: "
+        f"{str(ctx.get('expected', '')).replace(' or ', ' ou ')}.",
         "date_parsing": f"Data inválida em '{campo}'. Use o formato AAAA-MM-DD.",
+        "date_from_datetime_parsing": f"Data inválida em '{campo}'. Use o formato AAAA-MM-DD.",
         "int_parsing": f"O campo '{campo}' precisa ser um número inteiro.",
         "greater_than_equal": f"O campo '{campo}' precisa ser no mínimo {ctx.get('ge')}.",
         "less_than_equal": f"O campo '{campo}' pode ser no máximo {ctx.get('le')}.",
@@ -113,3 +115,4 @@ def raiz() -> dict[str, str]:
 
 
 app.include_router(usuarios.router)
+app.include_router(tasks.router)

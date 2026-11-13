@@ -28,6 +28,10 @@ class RegraDeNegocioViolada(ErroDeDominio):
     mensagem = "Operação recusada por uma regra de negócio."
 
 
+class TituloObrigatorio(RegraDeNegocioViolada):
+    mensagem = "O título da tarefa não pode ficar vazio."
+
+
 class ValorInvalido(RegraDeNegocioViolada):
     """Valor fora do conjunto aceito por um campo do domínio."""
     mensagem = "Valor inválido para o campo."

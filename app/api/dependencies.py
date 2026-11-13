@@ -11,8 +11,8 @@ from app.core.exceptions import NaoAutenticado
 from app.core.security import HashBcrypt, HashDeSenha, TokenJWT
 from app.db.database import obter_sessao
 from app.models import Usuario
-from app.repositories import UsuarioRepositorio
-from app.services import UsuarioServico
+from app.repositories import TarefaRepositorio, UsuarioRepositorio
+from app.services import TarefaServico, UsuarioServico
 
 # auto_error=False: sem este ajuste, o próprio FastAPI responderia à falta de
 # token, num formato diferente do resto da API. Assim, a falta de token vira
@@ -35,6 +35,13 @@ def obter_usuario_servico(
     tokens: TokenJWT = Depends(obter_tokens),
 ) -> UsuarioServico:
     return UsuarioServico(UsuarioRepositorio(sessao), hasher, tokens)
+
+
+def obter_tarefa_servico(
+    sessao: Session = Depends(obter_sessao),
+) -> TarefaServico:
+    """Serviço de tarefas, com o repositório de que depende."""
+    return TarefaServico(TarefaRepositorio(sessao))
 
 
 def obter_usuario_atual(
