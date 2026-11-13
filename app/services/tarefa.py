@@ -8,7 +8,7 @@ from typing import Any
 
 from app.core.exceptions import AcessoNaoAutorizado, TarefaNaoEncontrada
 from app.models import Tarefa
-from app.models.enums import PrioridadeTarefa
+from app.models.enums import PrioridadeTarefa, StatusTarefa
 from app.repositories import TarefaRepositorio
 
 
@@ -23,6 +23,7 @@ class AlteracoesDaTarefa:
     """Campos que um PATCH pediu para alterar."""
 
     titulo: Any = NAO_INFORMADO
+    status: Any = NAO_INFORMADO
     prioridade: Any = NAO_INFORMADO
     prazo: Any = NAO_INFORMADO
 
@@ -90,6 +91,11 @@ class TarefaServico:
     ) -> Tarefa:
         """Aplica as alterações informadas e devolve a tarefa atualizada.
 
+        A RN-03 não aparece aqui: a mudança de status é delegada a
+        `Tarefa.definir_status`, que é quem sabe o que fazer com a data de
+        conclusão. Se a regra existisse também no serviço, as duas cópias
+        acabariam divergindo.
+
         Raises:
             TarefaNaoEncontrada: a tarefa não existe.
             AcessoNaoAutorizado: a tarefa existe, mas é de outro usuário.
@@ -101,6 +107,8 @@ class TarefaServico:
             tarefa.prioridade = alteracoes.prioridade
         if alteracoes.informado("prazo"):
             tarefa.prazo = alteracoes.prazo
+        if alteracoes.informado("status"):
+            tarefa.definir_status(StatusTarefa(alteracoes.status))
         return self._tarefas.salvar(tarefa)
 
     def remover(self, tarefa_id: int, usuario_id: int) -> None:
