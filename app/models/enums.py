@@ -49,3 +49,25 @@ _PESOS = {
     PrioridadeTarefa.MEDIA: 2,
     PrioridadeTarefa.BAIXA: 3,
 }
+
+
+class CampoOrdenacao(str, Enum):
+    """Campos pelos quais a listagem de tarefas pode ser ordenada.
+
+    Os valores repetem o nome público do campo na API (camelCase), porque é
+    isso que o cliente envia em `?ordenarPor=`. Como é um enum, um valor fora
+    da lista passa a ser recusado com 422 — antes, o código caía
+    silenciosamente na ordenação por data de criação e o cliente nunca sabia
+    que seu parâmetro havia sido ignorado.
+    """
+
+    CRIADO_EM = "criadoEm"
+    PRAZO = "prazo"
+    PRIORIDADE = "prioridade"
+
+
+class Ordem(str, Enum):
+    """Sentido da ordenação."""
+
+    ASC = "asc"
+    DESC = "desc"

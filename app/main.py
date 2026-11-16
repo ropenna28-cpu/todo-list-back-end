@@ -6,6 +6,7 @@ from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.routers import tasks, usuarios
@@ -41,9 +42,26 @@ async def ciclo_de_vida(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(
     title="Todo List API",
-    description="Backend do ToDo List curso Desenvolvedor Full Stack (SENAC).",
-    version="0.10.0",
+    description=(
+        "Backend do ToDo List — curso Desenvolvedor Full Stack (SENAC). "
+        "Para usar as rotas protegidas: faça login em `POST /usuarios/login`, "
+        "copie o `accessToken` e cole no botão **Authorize**."
+    ),
+    version="0.11.0",
     lifespan=ciclo_de_vida,
+)
+
+# Sem o CORS, o navegador bloqueia o front-end (que roda em outro endereço,
+# como localhost:5173) de ler as respostas da API. O `expose_headers` libera o
+# JavaScript para ler o X-Total-Count: por padrão, só alguns cabeçalhos ficam
+# visíveis, e a paginação do front-end ficaria cega.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=list(obter_configuracao().origens_permitidas),
+    allow_credentials=False,  # o token vai no cabeçalho, não em cookie
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["X-Total-Count"],
 )
 
 
