@@ -114,3 +114,7 @@ class TarefaRepositorio(RepositorioBase[Tarefa]):
             .all()
         )
         return PaginaDeTarefas(tarefas=tarefas, total=total)
+
+    def todas_do_usuario(self, usuario_id: int) -> list[Tarefa]:
+        """Todas as tarefas de um usuário, sem filtro nem limite (para o resumo)."""
+        return self.sessao.query(Tarefa).filter(Tarefa.usuario_id == usuario_id).all()

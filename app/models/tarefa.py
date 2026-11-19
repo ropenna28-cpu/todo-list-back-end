@@ -118,6 +118,17 @@ class Tarefa(Base):
         else:
             self.reabrir()
 
+    def esta_atrasada(self, hoje: date | None = None) -> bool:
+        """Informa se o prazo venceu com a tarefa ainda pendente.
+
+        Duas tarefas nunca atrasam: a sem prazo (não há data para vencer) e a
+        concluída (mesmo que tenha sido concluída depois do prazo). Vencer
+        hoje ainda não é atraso: só a partir de amanhã.
+        """
+        if self.prazo is None or self.status is StatusTarefa.CONCLUIDA:
+            return False
+        return self.prazo < (hoje or date.today())
+
     def pertence_a(self, usuario_id: int) -> bool:
         """Informa se a tarefa é de um determinado usuário."""
         return self.usuario_id == usuario_id

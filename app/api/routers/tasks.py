@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, Query, Response, status
 from app.api.dependencies import UsuarioAtual, obter_tarefa_servico
 from app.models.enums import CampoOrdenacao, Ordem, PrioridadeTarefa, StatusTarefa
 from app.repositories import FiltroDeTarefas
-from app.schemas import TarefaCreate, TarefaOut, TarefaUpdate
+from app.schemas import ResumoOut, TarefaCreate, TarefaOut, TarefaUpdate
 from app.services import AlteracoesDaTarefa, TarefaServico
 
 router = APIRouter(
@@ -113,6 +113,18 @@ def listar_tasks(
     pagina = servico.listar(filtro)
     response.headers["X-Total-Count"] = str(pagina.total)
     return pagina.tarefas
+
+
+# Rota fixa SEMPRE antes de "/{tarefa_id}": o FastAPI testa na ordem declarada,
+# e se "/resumo" viesse depois, "resumo" seria lido como um tarefa_id inválido.
+@router.get(
+    "/resumo",
+    response_model=ResumoOut,
+    summary="Resumo para o Painel",
+)
+def resumo_tasks(usuario: UsuarioAtual, servico: Servico) -> ResumoOut:
+    """Total, pendentes, concluídas e atrasadas — os números da página Painel."""
+    return servico.resumo(usuario.id)
 
 
 @router.get(

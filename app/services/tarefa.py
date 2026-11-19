@@ -32,6 +32,20 @@ class AlteracoesDaTarefa:
         return getattr(self, campo) is not NAO_INFORMADO
 
 
+@dataclass(frozen=True)
+class Resumo:
+    """Os números do Painel de um usuário.
+
+    As análises da página Analytics ficarão em `services/analytics.py`,
+    calculadas com pandas.
+    """
+
+    total: int
+    pendentes: int
+    concluidas: int
+    atrasadas: int
+
+
 class TarefaServico:
     """Operações sobre as tarefas do usuário autenticado.
 
@@ -119,3 +133,15 @@ class TarefaServico:
             AcessoNaoAutorizado: a tarefa existe, mas é de outro usuário.
         """
         self._tarefas.remover(self.buscar(tarefa_id, usuario_id))
+
+    def resumo(self, usuario_id: int, hoje: date | None = None) -> Resumo:
+        """Calcula os números do Painel: total, pendentes, concluídas e atrasadas."""
+        hoje = hoje or date.today()
+        tarefas = self._tarefas.todas_do_usuario(usuario_id)
+        concluidas = sum(1 for t in tarefas if t.status is StatusTarefa.CONCLUIDA)
+        return Resumo(
+            total=len(tarefas),
+            pendentes=len(tarefas) - concluidas,
+            concluidas=concluidas,
+            atrasadas=sum(1 for t in tarefas if t.esta_atrasada(hoje)),
+        )
