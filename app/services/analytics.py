@@ -2,6 +2,11 @@
 
 Ideia central: transformar a lista de tarefas num DataFrame (uma linha por
 tarefa) e responder perguntas sobre a tabela inteira de uma vez, sem for.
+
+As quatro primeiras métricas são as da página do front-end (taxa de conclusão,
+concluídas por dia, pendentes por prioridade e total). As três últimas são
+análises novas: tempo médio para concluir, conclusões por dia da semana e
+percentual concluído no prazo.
 """
 
 from __future__ import annotations
@@ -15,6 +20,9 @@ import pandas as pd
 from app.models.enums import PrioridadeTarefa, StatusTarefa
 from app.repositories import TarefaRepositorio
 from app.models import Tarefa
+
+# No pandas, 0 = segunda-feira, 6 = domingo
+DIAS_DA_SEMANA = ["seg", "ter", "qua", "qui", "sex", "sab", "dom"]
 
 
 def arredondar(valor: float) -> int:
@@ -35,6 +43,10 @@ class Analytics:
     concluidas_na_janela: int
     concluidas_por_dia: list[dict]
     pendentes_por_prioridade: dict[PrioridadeTarefa, int]
+    # Análises novas — podem ser None quando não há dados suficientes
+    tempo_medio_conclusao_dias: float | None
+    concluidas_por_dia_da_semana: dict[str, int]
+    percentual_no_prazo: int | None
 
 
 class AnalyticsServico:
@@ -66,35 +78,50 @@ class AnalyticsServico:
             concluidas_na_janela=sum(item["quantidade"] for item in por_dia),
             concluidas_por_dia=por_dia,
             pendentes_por_prioridade=self._pendentes_por_prioridade(pendentes),
+            # Análises novas
+            tempo_medio_conclusao_dias=self._tempo_medio_conclusao(concluidas),
+            concluidas_por_dia_da_semana=self._por_dia_da_semana(concluidas),
+            percentual_no_prazo=self._percentual_no_prazo(concluidas),
         )
 
     # --- a tabela -----------------------------------------------------------
 
     @staticmethod
     def _montar_tabela(tarefas: list[Tarefa]) -> pd.DataFrame:
-        """Converte a lista de tarefas num DataFrame (uma linha por tarefa)."""
+        """Converte a lista de tarefas num DataFrame (uma linha por tarefa).
+
+        `StatusTarefa(...)` e `PrioridadeTarefa(...)` aceitam tanto o enum quanto
+        o texto ("baixa"), e `.value` devolve sempre o texto.
+        """
         fuso_do_servidor = datetime.now().astimezone().tzinfo
 
         tabela = pd.DataFrame({
-            "status":      [t.status.value for t in tarefas],
-            "prioridade":  [t.prioridade.value for t in tarefas],
+            "status":      [StatusTarefa(t.status).value for t in tarefas],
+            "prioridade":  [PrioridadeTarefa(t.prioridade).value for t in tarefas],
             "concluido_em": [t.concluido_em for t in tarefas],
+            "criado_em":   [t.criado_em for t in tarefas],
+            "prazo":       [t.prazo for t in tarefas],
         })
 
+        # Aplica a mesma conversão de fuso às duas colunas de instantes.
         # utc=True: o SQLite devolve datas sem fuso; como a aplicação sempre
         # grava em UTC, lemos sem fuso como UTC.
-        tabela["concluido_em"] = (
-            pd.to_datetime(tabela["concluido_em"], utc=True)
-            .dt.tz_convert(fuso_do_servidor)
-        )
+        # A criado_em passa pelo mesmo fuso para que a subtração concluido_em - criado_em
+        # compare horários do mesmo fuso.
+        for coluna in ("criado_em", "concluido_em"):
+            tabela[coluna] = (
+                pd.to_datetime(tabela[coluna], utc=True)
+                .dt.tz_convert(fuso_do_servidor)
+            )
 
+        # O prazo NÃO passa pela conversão: é uma data (sem hora), não um instante.
         # .dt.date fica só com o dia (sem hora) — para agrupar por dia.
-        # Tarefa pendente não tem data: vira NaT na coluna.
+        # Tarefa pendente não tem data de conclusão: vira NaT na coluna.
         tabela["dia_conclusao"] = tabela["concluido_em"].dt.date
 
         return tabela
 
-    # --- as métricas --------------------------------------------------------
+    # --- as métricas que o front já usa -------------------------------------
 
     @staticmethod
     def _concluidas_por_dia(concluidas: pd.DataFrame, dias: int, hoje: date) -> list[dict]:
@@ -124,3 +151,47 @@ class AnalyticsServico:
 
         # int(): converte numpy.int64 para int nativo do Python
         return {PrioridadeTarefa(prioridade): int(qtd) for prioridade, qtd in contagem.items()}
+
+    # --- análises novas (pandas) --------------------------------------------
+
+    @staticmethod
+    def _tempo_medio_conclusao(concluidas: pd.DataFrame) -> float | None:
+        """Média de dias entre a criação e a conclusão de cada tarefa.
+
+        Subtrai as duas colunas de datas diretamente — o pandas devolve uma
+        coluna de durações, uma por tarefa, sem precisar de for.
+        Devolve None se não há nada concluído.
+        """
+        if concluidas.empty:
+            return None
+
+        duracao = concluidas["concluido_em"] - concluidas["criado_em"]
+        return round(float((duracao.dt.total_seconds() / 86400).mean()), 1)
+
+    @staticmethod
+    def _por_dia_da_semana(concluidas: pd.DataFrame) -> dict[str, int]:
+        """Quantas tarefas foram concluídas em cada dia da semana (histórico inteiro)."""
+        contagem = (
+            concluidas["concluido_em"]
+            .dt.dayofweek
+            .value_counts()
+            .reindex(range(7), fill_value=0)
+        )
+
+        return {DIAS_DA_SEMANA[numero]: int(qtd) for numero, qtd in contagem.items()}
+
+    @staticmethod
+    def _percentual_no_prazo(concluidas: pd.DataFrame) -> int | None:
+        """Das concluídas com prazo, quantas % foram concluídas até o prazo.
+
+        'No prazo' inclui o próprio dia do prazo (<=, não <).
+        Devolve None se nenhuma concluída tinha prazo.
+        """
+        # notna(): só as que tinham prazo entram na conta
+        com_prazo = concluidas[concluidas["prazo"].notna()]
+        if com_prazo.empty:
+            return None
+
+        no_prazo = com_prazo["dia_conclusao"] <= com_prazo["prazo"]
+        # média de True/False = proporção de True (True vale 1, False vale 0)
+        return arredondar(no_prazo.mean() * 100)

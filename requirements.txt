@@ -7,6 +7,7 @@ python-dotenv==1.2.3
 bcrypt==5.0.0
 PyJWT==2.15.1
 pandas==3.0.6
+requests==2.32.5
 
 # Somente para desenvolvimento e testes
 pytest==9.1.1

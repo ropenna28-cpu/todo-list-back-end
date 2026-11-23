@@ -140,7 +140,12 @@ def analytics_tasks(
         Query(ge=1, le=90, description="Tamanho da janela de 'concluídas por dia' (1–90). Padrão: 7"),
     ] = 7,
 ) -> AnalyticsOut:
-    """Taxa de conclusão, concluídas por dia e pendentes por prioridade — calculados com pandas."""
+    """Taxa de conclusão, concluídas por dia, pendentes por prioridade, tempo médio
+    para concluir, conclusões por dia da semana e percentual no prazo — calculados com pandas.
+
+    Os quatro primeiros números são os mesmos que a página Analytics do front-end
+    calcula hoje no navegador. Os três últimos podem vir null quando não há dados.
+    """
     return servico.calcular(usuario.id, dias=dias)
 
 
