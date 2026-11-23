@@ -12,7 +12,7 @@ from app.core.security import HashBcrypt, HashDeSenha, TokenJWT
 from app.db.database import obter_sessao
 from app.models import Usuario
 from app.repositories import TarefaRepositorio, UsuarioRepositorio
-from app.services import TarefaServico, UsuarioServico
+from app.services import AnalyticsServico, TarefaServico, UsuarioServico
 
 # auto_error=False: sem este ajuste, o próprio FastAPI responderia à falta de
 # token, num formato diferente do resto da API. Assim, a falta de token vira
@@ -42,6 +42,13 @@ def obter_tarefa_servico(
 ) -> TarefaServico:
     """Serviço de tarefas, com o repositório de que depende."""
     return TarefaServico(TarefaRepositorio(sessao))
+
+
+def obter_analytics_servico(
+    sessao: Session = Depends(obter_sessao),
+) -> AnalyticsServico:
+    """Serviço de analytics — usa o mesmo repositório de tarefas; o pandas não fala com o banco."""
+    return AnalyticsServico(TarefaRepositorio(sessao))
 
 
 def obter_usuario_atual(

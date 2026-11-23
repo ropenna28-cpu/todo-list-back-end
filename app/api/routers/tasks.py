@@ -13,11 +13,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response, status
 
-from app.api.dependencies import UsuarioAtual, obter_tarefa_servico
+from app.api.dependencies import UsuarioAtual, obter_analytics_servico, obter_tarefa_servico
 from app.models.enums import CampoOrdenacao, Ordem, PrioridadeTarefa, StatusTarefa
 from app.repositories import FiltroDeTarefas
-from app.schemas import ResumoOut, TarefaCreate, TarefaOut, TarefaUpdate
-from app.services import AlteracoesDaTarefa, TarefaServico
+from app.schemas import AnalyticsOut, ResumoOut, TarefaCreate, TarefaOut, TarefaUpdate
+from app.services import AlteracoesDaTarefa, AnalyticsServico, TarefaServico
 
 router = APIRouter(
     prefix="/tasks",
@@ -115,8 +115,8 @@ def listar_tasks(
     return pagina.tarefas
 
 
-# Rota fixa SEMPRE antes de "/{tarefa_id}": o FastAPI testa na ordem declarada,
-# e se "/resumo" viesse depois, "resumo" seria lido como um tarefa_id inválido.
+# Rotas fixas SEMPRE antes de "/{tarefa_id}": o FastAPI testa na ordem declarada,
+# e se viessem depois, "resumo" e "analytics" seriam lidos como tarefa_id inválido.
 @router.get(
     "/resumo",
     response_model=ResumoOut,
@@ -125,6 +125,23 @@ def listar_tasks(
 def resumo_tasks(usuario: UsuarioAtual, servico: Servico) -> ResumoOut:
     """Total, pendentes, concluídas e atrasadas — os números da página Painel."""
     return servico.resumo(usuario.id)
+
+
+@router.get(
+    "/analytics",
+    response_model=AnalyticsOut,
+    summary="Análises para a página Analytics",
+)
+def analytics_tasks(
+    usuario: UsuarioAtual,
+    servico: Annotated[AnalyticsServico, Depends(obter_analytics_servico)],
+    dias: Annotated[
+        int,
+        Query(ge=1, le=90, description="Tamanho da janela de 'concluídas por dia' (1–90). Padrão: 7"),
+    ] = 7,
+) -> AnalyticsOut:
+    """Taxa de conclusão, concluídas por dia e pendentes por prioridade — calculados com pandas."""
+    return servico.calcular(usuario.id, dias=dias)
 
 
 @router.get(

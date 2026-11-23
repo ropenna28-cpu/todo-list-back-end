@@ -47,7 +47,7 @@ app = FastAPI(
         "Para usar as rotas protegidas: faça login em `POST /usuarios/login`, "
         "copie o `accessToken` e cole no botão **Authorize**."
     ),
-    version="0.12.0",
+    version="0.13.0",
     lifespan=ciclo_de_vida,
 )
 
